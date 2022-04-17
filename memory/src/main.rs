@@ -38,6 +38,7 @@ unsafe impl GlobalAlloc for ReportingAllocator {
         let bytes_requested = layout.size();
 
         eprintln!("{}\t{}", bytes_requested, time_taken.as_nanos());
+        return ptr;
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         System.dealloc(ptr, layout);
@@ -46,7 +47,7 @@ unsafe impl GlobalAlloc for ReportingAllocator {
 
 struct World {
     current_turn: u64,
-    particles: Vec<Box<Particles>>,
+    particles: Vec<Box<Particle>>,
     height: f64,
     width: f64,
     rng: ThreadRng,
@@ -186,4 +187,23 @@ fn main() {
     println!("z: {} ({:p} ...0x{:x})", z, z_ptr, z_addr + 7);
 
     // Graphics application ---------------------------------------
+    let (width, height) = (1280.0, 960.0);
+    let mut window: PistonWindow = WindowSettings::new(
+        "particles", [width, height]
+    ).exit_on_esc(true).build().expect("Could not create window");
+
+    let mut world = World::new(width, height);
+    world.add_shapes(1000);
+
+    while let Some(event) = window.next() {
+        world.update();
+
+        window.draw_2d(&event, |ctx, renderer, _device| {
+            clear([0.15, 0.17, 0.17, 0.9], renderer);
+            for s in &mut world.particles {
+                let size = [s.position[0], s.position[1], s.width, s.height];
+                rectangle(s.color, size, ctx.transform, renderer);
+            }
+        });
+    }
 }
